@@ -64,6 +64,9 @@ def matmul(A, B):
     return result
 
 
+def broadcast_scalar(value, rows, cols):
+ ## broadcast a single scalar across a matrix given a shape
+    return [[value] * cols for _ in range(rows)]
 
 
 def add(A, B):
@@ -79,10 +82,15 @@ def add(A, B):
 
     TODO: Implement element-wise addition with broadcasting support
     """
-    # TODO: Implement element-wise addition
+    result = zeros(shape(A)[0], shape(A)[1])
 
-    result =
-    pass
+    if not isinstance(B, list):
+        B = broadcast_scalar(B, shape(A)[0], shape(A)[1])
+    for i in range(len(A)):
+        for j in range(len(A[0])):
+            result[i][j] = A[i][j] + B[i][j]
+
+    return result
 
 
 def add_bias(Z, b):
@@ -98,8 +106,9 @@ def add_bias(Z, b):
 
     TODO: Implement bias addition (broadcast b across columns)
     """
-    # TODO: Implement bias addition
-    pass
+    matrix = zeros(shape(A)[0], shape(A),[1])
+
+
 
 
 def hadamard(A, B):
