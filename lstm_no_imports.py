@@ -52,8 +52,18 @@ def matmul(A, B):
 
     TODO: Implement matrix multiplication A @ B
     """
-    # TODO: Implement matrix multiplication
-    pass
+
+    if not len(A[0]) == len(B):
+        raise ValueError("Matrix dimensions incompatible")
+    result = zeros(shape(A)[0], shape(B)[1])
+    for i in range(len(A)):
+        for j in range(len(B[0])):
+            for k in range(len(A[0])):
+                result[i][j] += A[i][k] * B[k][j]
+
+    return result
+
+
 
 
 def add(A, B):
@@ -70,6 +80,8 @@ def add(A, B):
     TODO: Implement element-wise addition with broadcasting support
     """
     # TODO: Implement element-wise addition
+
+    result =
     pass
 
 
