@@ -49,8 +49,6 @@ def matmul(A, B):
 
     Returns:
         list[list[float]]: result shape (m, p)
-
-    TODO: Implement matrix multiplication A @ B
     """
 
     if not len(A[0]) == len(B):
@@ -79,8 +77,6 @@ def add(A, B):
 
     Returns:
         list[list[float]]: result shape (m, n)
-
-    TODO: Implement element-wise addition with broadcasting support
     """
     result = zeros(shape(A)[0], shape(A)[1])
 
@@ -103,12 +99,14 @@ def add_bias(Z, b):
 
     Returns:
         list[list[float]]: result shape (n_a, m)
-
-    TODO: Implement bias addition (broadcast b across columns)
     """
-    matrix = zeros(shape(A)[0], shape(A),[1])
+    matrix = zeros(shape(Z)[0], shape(Z)[1])
 
+    for i in range(len(matrix)):
+        for j in range(len(matrix[0])):
+            matrix[i][j] = Z[i][j] + b[i][0]
 
+    return matrix
 
 
 def hadamard(A, B):
@@ -121,11 +119,18 @@ def hadamard(A, B):
 
     Returns:
         list[list[float]]: result shape (m, n)
-
-    TODO: Implement element-wise multiplication
     """
-    # TODO: Implement Hadamard product
-    pass
+
+    if not shape(A) == shape(B):
+        raise ValueError("Matrix dimensions incompatible")
+
+    matrix = zeros(shape(A)[0], shape(A)[1])
+
+    for i in range(len(matrix)):
+        for j in range(len(matrix[0])):
+            matrix[i][j] = A[i][j] * B[i][j]
+
+    return matrix
 
 
 def apply_fn(A, fn):
@@ -138,12 +143,16 @@ def apply_fn(A, fn):
 
     Returns:
         list[list[float]]: result same shape as A
-
-    TODO: Implement element-wise function application
     """
-    # TODO: Implement element-wise function application
-    pass
+    if not isinstance(A, list):
+        raise ValueError("Input needs to be a matrix")
 
+    matrix = zeros(shape(A)[0], shape(A)[1])
+    for i in range(len(matrix)):
+        for j in range(len(matrix[0])):
+            matrix[i][j] = fn(A[i][j])
+
+    return matrix
 
 def concat_rows(A, B):
     """
@@ -155,12 +164,21 @@ def concat_rows(A, B):
 
     Returns:
         list[list[float]]: result shape (m, n+p)
-
-    TODO: Implement horizontal concatenation
     """
-    # TODO: Implement horizontal concatenation
-    pass
+    m = shape(A)[0]
+    n = shape(A)[1]
+    p = shape(B)[1]
 
+    matrix = zeros(m, n + p)
+
+    for i in range(len(matrix)):
+        for j in range(len(matrix[0])):
+            if j < n:
+                matrix[i][j] = A[i][j]
+            else:
+                matrix[i][j] = B[i][j - n]
+
+    return matrix
 
 # ============================================================================
 # Activation Functions
@@ -172,52 +190,41 @@ E = 2.718281828459045  # Euler's number
 def exp_approx(x):
     """
     Approximate exp(x) element-wise using E ** x.
-    Clamp input to [-30, 30] to avoid overflow.
 
     Args:
         x: float, input value
 
     Returns:
         float: E ** clamp(x, -30, 30)
-
-    TODO: Implement exp approximation with clamping
     """
-    # TODO: Implement exp_approx with clamping
-    pass
+    clamped = max(-30, min(30, x)) ## to prevent overflow
+
+    return E ** clamped
 
 
 def sigmoid(x):
     """
     Sigmoid activation: 1 / (1 + exp(-x)).
-    Clamp x to [-30, 30] before computation.
-
     Args:
         x: float, input value
 
     Returns:
         float: sigmoid(x)
-
-    TODO: Implement sigmoid with clamping
     """
-    # TODO: Implement sigmoid(x) = 1 / (1 + exp(-clamp(x, -30, 30)))
-    pass
+    return 1 / (1 + exp_approx(-x))
 
 
 def tanh(x):
     """
     Tanh activation: (exp(x) - exp(-x)) / (exp(x) + exp(-x)).
-    Clamp x to [-30, 30] before computation.
 
     Args:
         x: float, input value
 
     Returns:
         float: tanh(x)
-
-    TODO: Implement tanh with clamping
     """
-    # TODO: Implement tanh with clamping
-    pass
+    return (exp_approx(x) - exp_approx(-x)) / (exp_approx(x) + exp_approx(-x))
 
 
 # ============================================================================
@@ -247,12 +254,22 @@ def lstm_cell_forward(xt, a_prev, c_prev, params):
         c_next = ft * c_prev + it * cct # new cell state
         ot = sigmoid(Wo @ concat + bo)  # output gate
         a_next = ot * tanh(c_next)      # new hidden state
-
-    TODO: Implement LSTM cell forward equations
     """
-    # TODO: Implement LSTM cell forward pass
-    pass
+    n_x = shape(xt)[0]
+    m = shape(xt)[1]
+    n_a = shape(a_prev)[0]
+    Wf, Wi, Wc, Wo = params['Wf'], params['Wi'], params['Wc'], params['Wo']
+    bf, bi, bc, bo = params['bf'], params['bi'], params['bc'], params['bo']
 
+    concat = concat_rows(a_prev, xt)
+    ft = apply_fn(add_bias(matmul(Wf, concat), bf), sigmoid)
+    it = apply_fn(add_bias(matmul(Wi, concat), bi), sigmoid)
+    cct = apply_fn(add_bias(matmul(Wc, concat), bc), tanh)
+    c_next = add(hadamard(ft, c_prev), hadamard(it, cct))
+    ot = apply_fn(add_bias(matmul(Wo, concat), bo), sigmoid)
+    a_next = hadamard(ot, apply_fn(c_next, tanh))
+
+    return tuple([a_next, c_next])
 
 def lstm_forward(x, a0, c0, params):
     """
