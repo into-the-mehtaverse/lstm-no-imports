@@ -180,6 +180,36 @@ def concat_rows(A, B):
 
     return matrix
 
+
+def concat_cols(A, B):
+    """
+    Concatenate matrices A and B along rows (vertical concat).
+    Stacks A on top of B.
+
+    Args:
+        A: list[list[float]], shape (m, n)
+        B: list[list[float]], shape (p, n)  # same number of columns
+
+    Returns:
+        list[list[float]]: result shape (m+p, n)
+
+    TODO: Implement vertical concatenation (stack A on top of B)
+    """
+    m = shape(A)[0]
+    n = shape(A)[1]
+    p = shape(B)[0]
+
+    matrix = zeros(m + p, n)
+    for i in range(n):
+        for j in range(m + p):
+            if j < m:
+                matrix[j][i] = A[j][i]
+            else:
+                matrix[j][i] = B[j - m][i]
+
+    return matrix
+
+
 # ============================================================================
 # Activation Functions
 # ============================================================================
@@ -261,7 +291,7 @@ def lstm_cell_forward(xt, a_prev, c_prev, params):
     Wf, Wi, Wc, Wo = params['Wf'], params['Wi'], params['Wc'], params['Wo']
     bf, bi, bc, bo = params['bf'], params['bi'], params['bc'], params['bo']
 
-    concat = concat_rows(a_prev, xt)
+    concat = concat_cols(a_prev, xt)
     ft = apply_fn(add_bias(matmul(Wf, concat), bf), sigmoid)
     it = apply_fn(add_bias(matmul(Wi, concat), bi), sigmoid)
     cct = apply_fn(add_bias(matmul(Wc, concat), bc), tanh)
@@ -283,11 +313,16 @@ def lstm_forward(x, a0, c0, params):
 
     Returns:
         tuple: (a_T, c_T), final hidden and cell states, both shape (n_a, m)
-
-    TODO: Loop over timesteps t=0..T-1 and call lstm_cell_forward
     """
-    # TODO: Implement forward pass loop over timesteps
-    pass
+
+    a = a0
+    c = c0
+
+    for t in range(len(x)):
+        a, c = lstm_cell_forward(x[t], a, c, params)
+
+    return tuple([a, c])
+
 
 
 # ============================================================================
