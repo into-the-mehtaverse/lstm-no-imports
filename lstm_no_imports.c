@@ -79,6 +79,14 @@ void free_matrix(double** matrix, int rows) {
 void matmul(double** A, double** B, int m, int n, int p, double** result) {
     // TODO: Implement matrix multiplication
     // result[i][j] = sum over k of A[i][k] * B[k][j]
+    for(int i = 0; i < m; i++) {
+        for(int j = 0; j < p; j++) {
+            result[i][j] = 0.0;
+            for(int k = 0; k < n; k++) {
+                result[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
 }
 
 /**
