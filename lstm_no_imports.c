@@ -376,7 +376,7 @@ void lstm_cell_forward(double** xt, double** a_prev, double** c_prev,
     free_matrix(ft, n_a);
     free_matrix(it, n_a);
     free_matrix(cct, n_a);
-    free_matrix(temp_result1, n_a)
+    free_matrix(temp_result1, n_a);
     free_matrix(ot, n_a);
 
 
@@ -405,6 +405,35 @@ void lstm_forward(double*** x, double** a0, double** c0,
     // For each timestep, call lstm_cell_forward and update a, c
     // Copy final states to a_T and c_T
 
+
+    // allocate a and c
+    double** a = zeros(n_a, m);
+    double** c = zeros(n_a, m);
+
+    // copy a0 and c0 into a and c to start
+    for (int i = 0; i < n_a; i++) {
+        for (int j = 0; j < m; j++) {
+            a[i][j] = a0[i][j];
+            c[i][j] = c0[i][j];
+        }
+    }
+
+    // loop over all time steps
+    for (int t = 0; t < T; t++) {
+        lstm_cell_forward(x[t], a, c, params, n_x, n_a, m, a, c);
+    }
+
+    // copy final a and c into a_T and c_T
+    for (int i = 0; i < n_a; i++) {
+        for (int j = 0; j < m; j++) {
+            a_T[i][j] = a[i][j];
+            c_T[i][j] = c[i][j];
+        }
+    }
+
+    // free temps
+    free_matrix(a, n_a);
+    free_matrix(c, n_a);
 
 }
 
@@ -457,14 +486,24 @@ int main() {
     double** a_T = zeros(n_a, m);
     double** c_T = zeros(n_a, m);
 
+    // Create params struct
+    LSTM_Params params;
+    params.Wf = Wf;
+    params.Wi = Wi;
+    params.Wc = Wc;
+    params.Wo = Wo;
+    params.bf = bf;
+    params.bi = bi;
+    params.bc = bc;
+    params.bo = bo;
+
     // Run forward pass
     printf("Running LSTM forward pass...\n");
     printf("Input x: %d timesteps, each shape (%d, %d)\n", T, n_x, m);
     printf("Initial a0 shape: (%d, %d)\n", n_a, m);
     printf("Initial c0 shape: (%d, %d)\n", n_a, m);
 
-    lstm_forward(x, a0, c0, Wf, Wi, Wc, Wo, bf, bi, bc, bo,
-                 n_x, n_a, m, T, a_T, c_T);
+    lstm_forward(x, a0, c0, &params, n_x, n_a, m, T, a_T, c_T);
 
     printf("\nFinal a_T shape: (%d, %d)\n", n_a, m);
     printf("Final c_T shape: (%d, %d)\n", n_a, m);
