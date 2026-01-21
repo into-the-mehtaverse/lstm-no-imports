@@ -306,14 +306,67 @@ double tanh_activation(double x) {
  *
  * TODO: Implement LSTM cell forward equations
  */
+
+typedef struct {
+    double** Wf, **Wi, **Wc, **Wo;
+    double** bf, **bi, **bc, **bo;
+} LSTM_Params;
+
 void lstm_cell_forward(double** xt, double** a_prev, double** c_prev,
-                       double** Wf, double** Wi, double** Wc, double** Wo,
-                       double** bf, double** bi, double** bc, double** bo,
+                        LSTM_Params* params,
                        int n_x, int n_a, int m,
                        double** a_next, double** c_next) {
     // TODO: Implement LSTM cell forward pass
     // Hint: You'll need temporary matrices for intermediate calculations
     // Remember to free them when done!
+
+    double** concat = zeros(n_a + n_x, m);
+    double** bias_temp = zeros(n_a, m);
+    double** gate_temp = zeros(n_a, m);
+
+    concat_cols(a_prev, xt, n_a, m, n_x, concat);
+
+    // forget gate
+
+    double** ft = zeros(n_a, m);
+
+    matmul(params->Wf, concat, n_a, n_a+n_x, m, gate_temp);
+    add_bias(gate_temp, params->bf, n_a, m, bias_temp);
+    apply_fn(bias_temp, n_a, m, sigmoid, ft);
+
+    // input gate
+    double** it = zeros(n_a, m);
+
+    matmul(params->Wi, concat, n_a, n_a+n_x, m, gate_temp);
+    add_bias(gate_temp, params->bi, n_a, m, bias_temp);
+    apply_fn(bias_temp, n_a, m, sigmoid, it);
+
+    // candidate cell
+    double** cct = zeros(n_a, m);
+
+    matmul(params->Wc, concat, n_a, n_a+n_x, m, gate_temp);
+    add_bias(gate_temp, params->bc, n_a, m, bias_temp);
+    apply_fn(bias_temp, n_a, m, tanh_activation, cct);
+
+    // new cell state
+
+    double** temp_result1 = zeros(n_a, m);
+
+    hadamard(ft, c_prev, n_a, m, temp_result1);
+    hadamard(it, cct, n_a, m, gate_temp);
+
+    add(temp_result1, gate_temp, n_a, m, c_next, 0);
+
+    // output gate
+
+    double** ot = zeros(n_a, m);
+    matmul(params->Wo, concat, n_a, n_a+n_x, m, gate_temp);
+    add_bias(gate_temp, params->bi, n_a, m, bias_temp);
+    apply_fn(bias_temp, n_a, m, sigmoid, ot);
+
+    // new hidden state
+
+
 
 
 }
