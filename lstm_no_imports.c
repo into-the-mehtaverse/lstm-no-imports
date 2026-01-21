@@ -361,12 +361,23 @@ void lstm_cell_forward(double** xt, double** a_prev, double** c_prev,
 
     double** ot = zeros(n_a, m);
     matmul(params->Wo, concat, n_a, n_a+n_x, m, gate_temp);
-    add_bias(gate_temp, params->bi, n_a, m, bias_temp);
+    add_bias(gate_temp, params->bo, n_a, m, bias_temp);
     apply_fn(bias_temp, n_a, m, sigmoid, ot);
 
     // new hidden state
 
+    apply_fn(c_next, n_a, m, tanh_activation, gate_temp);
+    hadamard(ot, gate_temp, n_a, m, a_next);
 
+    // free temp matrices
+    free_matrix(concat, n_a + n_x);
+    free_matrix(bias_temp, n_a);
+    free_matrix(gate_temp, n_a);
+    free_matrix(ft, n_a);
+    free_matrix(it, n_a);
+    free_matrix(cct, n_a);
+    free_matrix(temp_result1, n_a)
+    free_matrix(ot, n_a);
 
 
 }
@@ -386,14 +397,15 @@ void lstm_cell_forward(double** xt, double** a_prev, double** c_prev,
  * TODO: Loop over timesteps t=0..T-1 and call lstm_cell_forward
  */
 void lstm_forward(double*** x, double** a0, double** c0,
-                  double** Wf, double** Wi, double** Wc, double** Wo,
-                  double** bf, double** bi, double** bc, double** bo,
+                  LSTM_Params* params,
                   int n_x, int n_a, int m, int T,
                   double** a_T, double** c_T) {
     // TODO: Implement forward pass loop over timesteps
     // Hint: Initialize a and c from a0 and c0
     // For each timestep, call lstm_cell_forward and update a, c
     // Copy final states to a_T and c_T
+
+
 }
 
 // ============================================================================
