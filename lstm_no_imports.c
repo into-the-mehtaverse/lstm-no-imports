@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #define E 2.718281828459045  // Euler's number
 
@@ -181,6 +182,15 @@ void apply_fn(double** A, int rows, int cols, double (*fn)(double), double** res
  */
 void concat_rows(double** A, double** B, int m, int n, int p, double** result) {
 
+    for(int i = 0; i < m; i++) {
+        for(int j = 0; j < (n + p); j++) {
+            if (j < n) {
+                result[i][j] = A[i][j];
+            } else {
+                result[i][j] = B[i][j - n];
+            }
+        }
+    }
 }
 
 /**
@@ -196,7 +206,16 @@ void concat_rows(double** A, double** B, int m, int n, int p, double** result) {
  * TODO: Implement vertical concatenation (stack A on top of B)
  */
 void concat_cols(double** A, double** B, int m, int n, int p, double** result) {
-    // TODO: Implement vertical concatenation
+
+    for (int i = 0; i < (m + p); i++) {
+        for (int j = 0; j < n; j++) {
+            if (i < m) {
+                result[i][j] = A[i][j];
+            } else {
+                result[i][j] = B[i - m][j];
+            }
+        }
+    }
 }
 
 // ============================================================================
@@ -224,43 +243,40 @@ double clamp(double x, double min_val, double max_val) {
  *
  * TODO: Implement exp approximation with clamping
  */
+
 double exp_approx(double x) {
-    // TODO: Implement exp_approx with clamping
-    return 0.0;
+
+    double clamped = clamp(x, -30, 30);
+
+
+    return pow(E, clamped);
 }
 
 /**
  * Sigmoid activation: 1 / (1 + exp(-x)).
- * Clamp x to [-30, 30] before computation.
  *
  * Args:
  *   x: input value
  *
  * Returns:
  *   double: sigmoid(x)
- *
- * TODO: Implement sigmoid with clamping
  */
 double sigmoid(double x) {
-    // TODO: Implement sigmoid(x) = 1 / (1 + exp(-clamp(x, -30, 30)))
-    return 0.0;
+
+    return 1 / (1 + exp_approx(-x));
 }
 
 /**
  * Tanh activation: (exp(x) - exp(-x)) / (exp(x) + exp(-x)).
- * Clamp x to [-30, 30] before computation.
  *
  * Args:
  *   x: input value
  *
  * Returns:
  *   double: tanh(x)
- *
- * TODO: Implement tanh with clamping
  */
 double tanh_activation(double x) {
-    // TODO: Implement tanh with clamping (using exp_approx)
-    return 0.0;
+    return (exp_approx(x) - exp_approx(-x)) / (exp_approx(x) + exp_approx(-x));
 }
 
 // ============================================================================
@@ -298,6 +314,8 @@ void lstm_cell_forward(double** xt, double** a_prev, double** c_prev,
     // TODO: Implement LSTM cell forward pass
     // Hint: You'll need temporary matrices for intermediate calculations
     // Remember to free them when done!
+
+
 }
 
 /**
