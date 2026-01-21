@@ -76,13 +76,20 @@ void free_matrix(double** matrix, int rows) {
  *   result: output matrix shape (m, p) - must be pre-allocated
  */
 void matmul(double** A, double** B, int m, int n, int p, double** result) {
-    // TODO: Implement matrix multiplication
+    // this versino is an improvement from my naive implmenetation
+    // based on the benchmarking in the matmul optimization file this version seems to deliver the highest gain on my cpu, im sure it will be different / improved on a gpu with more parallelism
     // result[i][j] = sum over k of A[i][k] * B[k][j]
     for(int i = 0; i < m; i++) {
+        // initialize row rightwe use it for better cache locality
         for(int j = 0; j < p; j++) {
             result[i][j] = 0.0;
-            for(int k = 0; k < n; k++) {
-                result[i][j] += A[i][k] * B[k][j];
+        }
+
+        // accumulate into it
+        for(int k = 0; k < n; k++) {
+            double a_ik = A[i][k];  // load once
+            for(int j = 0; j < p; j++) {
+                result[i][j] += a_ik * B[k][j];  // sequential access to B
             }
         }
     }

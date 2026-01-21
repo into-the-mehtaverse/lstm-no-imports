@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <math.h>
 
 // ============================================================================
 // Your Original Implementation (for comparison)
@@ -35,15 +37,14 @@ void matmul_naive(double** A, double** B, int m, int n, int p, double** result) 
  * and accumulates into result[i][j] which stays in cache.
  */
 void matmul_reordered(double** A, double** B, int m, int n, int p, double** result) {
-    // Initialize result to zero
+    // Reordered: i -> k -> j
     for(int i = 0; i < m; i++) {
+        // Initialize this row right before we use it (better cache locality)
         for(int j = 0; j < p; j++) {
             result[i][j] = 0.0;
         }
-    }
 
-    // Reordered: i -> k -> j
-    for(int i = 0; i < m; i++) {
+        // Then accumulate into it
         for(int k = 0; k < n; k++) {
             double a_ik = A[i][k];  // Load once, use multiple times
             for(int j = 0; j < p; j++) {
@@ -193,6 +194,37 @@ void matmul_optimized(double** A, double** B, int m, int n, int p, double** resu
 }
 
 // ============================================================================
+// Timing Utilities
+// ============================================================================
+
+/**
+ * Get current time in seconds (high resolution)
+ */
+double get_time() {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec + ts.tv_nsec / 1e9;
+}
+
+/**
+ * Time a matrix multiplication function
+ */
+double time_matmul(void (*func)(double**, double**, int, int, int, double**),
+                   double** A, double** B, int m, int n, int p, double** result,
+                   int iterations) {
+    // Warmup
+    func(A, B, m, n, p, result);
+
+    double start = get_time();
+    for(int i = 0; i < iterations; i++) {
+        func(A, B, m, n, p, result);
+    }
+    double end = get_time();
+
+    return (end - start) / iterations;
+}
+
+// ============================================================================
 // Example Usage and Performance Comparison
 // ============================================================================
 
@@ -216,72 +248,165 @@ void matmul_optimized(double** A, double** B, int m, int n, int p, double** resu
  */
 
 int main() {
-    // Example: 100x100 matrices
-    int m = 100, n = 100, p = 100;
+    // Large matrix test for meaningful performance differences
+    int m = 1000, n = 1000, p = 1000;
+    int iterations = 2;  // Number of runs to average
 
-    // Allocate matrices (simplified - you'd use your zeros() function)
+    printf("=================================================================\n");
+    printf("Matrix Multiplication Performance Benchmark\n");
+    printf("=================================================================\n");
+    printf("Matrix size: %d x %d x %d\n", m, n, p);
+    printf("Iterations per test: %d\n", iterations);
+    printf("=================================================================\n\n");
+
+    // Allocate matrices
     double** A = (double**)malloc(m * sizeof(double*));
     double** B = (double**)malloc(n * sizeof(double*));
-    double** result1 = (double**)malloc(m * sizeof(double*));
-    double** result2 = (double**)malloc(m * sizeof(double*));
+    double** result_naive = (double**)malloc(m * sizeof(double*));
+    double** result_reordered = (double**)malloc(m * sizeof(double*));
+    double** result_blocked = (double**)malloc(m * sizeof(double*));
+    double** result_optimized = (double**)malloc(m * sizeof(double*));
+    #ifdef __AVX2__
+    double** result_simd = (double**)malloc(m * sizeof(double*));
+    #endif
 
     for(int i = 0; i < m; i++) {
         A[i] = (double*)malloc(n * sizeof(double));
-        result1[i] = (double*)calloc(p, sizeof(double));
-        result2[i] = (double*)calloc(p, sizeof(double));
+        result_naive[i] = (double*)calloc(p, sizeof(double));
+        result_reordered[i] = (double*)calloc(p, sizeof(double));
+        result_blocked[i] = (double*)calloc(p, sizeof(double));
+        result_optimized[i] = (double*)calloc(p, sizeof(double));
+        #ifdef __AVX2__
+        result_simd[i] = (double*)calloc(p, sizeof(double));
+        #endif
     }
     for(int i = 0; i < n; i++) {
         B[i] = (double*)malloc(p * sizeof(double));
     }
 
-    // Initialize with test data
+    // Initialize with random test data
+    srand(42);  // Fixed seed for reproducibility
     for(int i = 0; i < m; i++) {
         for(int j = 0; j < n; j++) {
-            A[i][j] = 1.0;
+            A[i][j] = (double)rand() / RAND_MAX;
         }
     }
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < p; j++) {
-            B[i][j] = 1.0;
+            B[i][j] = (double)rand() / RAND_MAX;
         }
     }
 
-    printf("Testing matrix multiplication optimizations...\n");
+    printf("Running benchmarks...\n\n");
 
-    // Test naive version
-    matmul_naive(A, B, m, n, p, result1);
-    printf("Naive version completed.\n");
+    // Time each implementation
+    double time_naive = time_matmul(matmul_naive, A, B, m, n, p, result_naive, iterations);
+    printf("1. Naive:                    %.4f seconds\n", time_naive);
 
-    // Test optimized version
-    matmul_optimized(A, B, m, n, p, result2);
-    printf("Optimized version completed.\n");
+    double time_reordered = time_matmul(matmul_reordered, A, B, m, n, p, result_reordered, iterations);
+    printf("2. Reordered:                %.4f seconds (%.2fx speedup)\n",
+           time_reordered, time_naive / time_reordered);
+
+    double time_blocked = time_matmul(matmul_blocked, A, B, m, n, p, result_blocked, iterations);
+    printf("3. Blocked:                  %.4f seconds (%.2fx speedup)\n",
+           time_blocked, time_naive / time_blocked);
+
+    double time_optimized = time_matmul(matmul_optimized, A, B, m, n, p, result_optimized, iterations);
+    printf("4. Optimized (Blocked+Reord): %.4f seconds (%.2fx speedup)\n",
+           time_optimized, time_naive / time_optimized);
+
+    #ifdef __AVX2__
+    double time_simd = time_matmul(matmul_simd, A, B, m, n, p, result_simd, iterations);
+    printf("5. SIMD (AVX2):              %.4f seconds (%.2fx speedup)\n",
+           time_simd, time_naive / time_simd);
+    #else
+    printf("5. SIMD (AVX2):              [Not compiled - use -mavx2 -mfma flags]\n");
+    #endif
+
+    printf("\n=================================================================\n");
+    printf("Fastest implementation: ");
+
+    double fastest_time = time_naive;
+    const char* fastest_name = "Naive";
+
+    if(time_reordered < fastest_time) {
+        fastest_time = time_reordered;
+        fastest_name = "Reordered";
+    }
+    if(time_blocked < fastest_time) {
+        fastest_time = time_blocked;
+        fastest_name = "Blocked";
+    }
+    if(time_optimized < fastest_time) {
+        fastest_time = time_optimized;
+        fastest_name = "Optimized (Blocked+Reordered)";
+    }
+    #ifdef __AVX2__
+    if(time_simd < fastest_time) {
+        fastest_time = time_simd;
+        fastest_name = "SIMD (AVX2)";
+    }
+    #endif
+
+    printf("%s (%.4f seconds)\n", fastest_name, fastest_time);
+    printf("=================================================================\n\n");
 
     // Verify results are similar (allowing for floating point differences)
-    int matches = 1;
+    printf("Verifying correctness...\n");
+    int all_match = 1;
+    double max_diff = 0.0;
+
+    // Compare all results against naive
     for(int i = 0; i < m; i++) {
         for(int j = 0; j < p; j++) {
-            double diff = result1[i][j] - result2[i][j];
-            if(diff > 0.0001 || diff < -0.0001) {
-                matches = 0;
-                break;
+            double ref = result_naive[i][j];
+
+            double diff_reordered = fabs(result_reordered[i][j] - ref);
+            double diff_blocked = fabs(result_blocked[i][j] - ref);
+            double diff_optimized = fabs(result_optimized[i][j] - ref);
+
+            if(diff_reordered > max_diff) max_diff = diff_reordered;
+            if(diff_blocked > max_diff) max_diff = diff_blocked;
+            if(diff_optimized > max_diff) max_diff = diff_optimized;
+
+            if(diff_reordered > 0.001 || diff_blocked > 0.001 || diff_optimized > 0.001) {
+                all_match = 0;
             }
+
+            #ifdef __AVX2__
+            double diff_simd = fabs(result_simd[i][j] - ref);
+            if(diff_simd > max_diff) max_diff = diff_simd;
+            if(diff_simd > 0.001) all_match = 0;
+            #endif
         }
     }
-    printf("Results match: %s\n", matches ? "Yes" : "No");
+
+    printf("Results match: %s (max difference: %.6f)\n",
+           all_match ? "Yes" : "No", max_diff);
 
     // Cleanup
     for(int i = 0; i < m; i++) {
         free(A[i]);
-        free(result1[i]);
-        free(result2[i]);
+        free(result_naive[i]);
+        free(result_reordered[i]);
+        free(result_blocked[i]);
+        free(result_optimized[i]);
+        #ifdef __AVX2__
+        free(result_simd[i]);
+        #endif
     }
     for(int i = 0; i < n; i++) {
         free(B[i]);
     }
     free(A);
     free(B);
-    free(result1);
-    free(result2);
+    free(result_naive);
+    free(result_reordered);
+    free(result_blocked);
+    free(result_optimized);
+    #ifdef __AVX2__
+    free(result_simd);
+    #endif
 
     return 0;
 }
