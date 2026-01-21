@@ -73,8 +73,6 @@ void free_matrix(double** matrix, int rows) {
  *   B: matrix shape (n, p)
  *   m, n, p: dimensions
  *   result: output matrix shape (m, p) - must be pre-allocated
- *
- * TODO: Implement matrix multiplication A @ B
  */
 void matmul(double** A, double** B, int m, int n, int p, double** result) {
     // TODO: Implement matrix multiplication
@@ -94,14 +92,27 @@ void matmul(double** A, double** B, int m, int n, int p, double** result) {
  *
  * Args:
  *   A: matrix shape (m, n)
- *   B: matrix shape (m, n) or broadcastable
+ *   B: matrix shape (m, n) or broadcastable with input like [[scalar]]
  *   m, n: dimensions
+ *   broadcast: integer value of either 0 or 1
  *   result: output matrix shape (m, n) - must be pre-allocated
- *
- * TODO: Implement element-wise addition with broadcasting support
  */
-void add(double** A, double** B, int m, int n, double** result) {
-    // TODO: Implement element-wise addition
+void add(double** A, double** B, int m, int n, double** result, int broadcast) {
+
+    if(broadcast) {
+        for(int i = 0; i < m; i++) {
+            for(int j = 0; j < n; j++) {
+                result[i][j] = A[i][j] + B[0][0];
+            }
+        }
+    } else {
+        for(int i = 0; i < m; i++) {
+            for(int j = 0; j < n; j++) {
+                result[i][j] = A[i][j] + B[i][j];
+            }
+        }
+    }
+
 }
 
 /**
@@ -112,11 +123,14 @@ void add(double** A, double** B, int m, int n, double** result) {
  *   b: matrix shape (n_a, 1)
  *   n_a, m: dimensions
  *   result: output matrix shape (n_a, m) - must be pre-allocated
- *
- * TODO: Implement bias addition (broadcast b across columns)
  */
 void add_bias(double** Z, double** b, int n_a, int m, double** result) {
-    // TODO: Implement bias addition
+
+    for(int i = 0; i < n_a; i++) {
+        for(int j = 0; j < m; j++) {
+            result[i][j] = Z[i][j] + b[i][0];
+        }
+    }
 }
 
 /**
@@ -127,11 +141,13 @@ void add_bias(double** Z, double** b, int n_a, int m, double** result) {
  *   B: matrix shape (m, n)
  *   m, n: dimensions
  *   result: output matrix shape (m, n) - must be pre-allocated
- *
- * TODO: Implement element-wise multiplication
  */
 void hadamard(double** A, double** B, int m, int n, double** result) {
-    // TODO: Implement Hadamard product
+    for(int i = 0; i < m; i++) {
+        for(int j = 0; j < n; j++) {
+            result[i][j] = A[i][j] * B[i][j];
+        }
+    }
 }
 
 /**
@@ -143,10 +159,14 @@ void hadamard(double** A, double** B, int m, int n, double** result) {
  *   fn: function pointer to apply element-wise
  *   result: output matrix - must be pre-allocated
  *
- * TODO: Implement element-wise function application
  */
 void apply_fn(double** A, int rows, int cols, double (*fn)(double), double** result) {
-    // TODO: Implement element-wise function application
+
+    for(int i = 0; i < rows; i++) {
+        for(int j = 0; j < cols; j++) {
+            result[i][j] = fn(A[i][j]);
+        }
+    }
 }
 
 /**
@@ -158,10 +178,9 @@ void apply_fn(double** A, int rows, int cols, double (*fn)(double), double** res
  *   m, n, p: dimensions
  *   result: output matrix shape (m, n+p) - must be pre-allocated
  *
- * TODO: Implement horizontal concatenation
  */
 void concat_rows(double** A, double** B, int m, int n, int p, double** result) {
-    // TODO: Implement horizontal concatenation
+
 }
 
 /**
